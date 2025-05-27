@@ -5,6 +5,8 @@ Raspberry Pi Pico / ESPHome based central heating controller
 
 ![image](https://github.com/user-attachments/assets/bf844d99-962a-4d8e-8c5c-6d56b02202bd)
 
+![image](https://github.com/user-attachments/assets/94289851-4b11-4064-8eb7-1d9560bbeda1)
+
 
 
 # Background
