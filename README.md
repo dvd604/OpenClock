@@ -30,7 +30,7 @@ Only tested in my house - has an oil fired boiler, which is controlled in two wa
  
 # The benefit of hindsight
 
-While OpenClock has worked well for over a year, having spent some time with it, I now know how I would it different - and probably will. If I was doing this centralised control method again, I would buy a Shelly relay - these guys have far more experience than me with designing safe electronics, and their hardware is small enough to fit in a UK backbox. One of their relays probably costs less than the price of the PCBs alone.
+While OpenClock has worked well for over a year, having spent some time with it, I now know how I would do it different - and probably will. If I was doing this centralised control method again, I would buy a Shelly relay - these guys have far more experience than me with designing safe electronics, and their hardware is small enough to fit in a UK backbox. One of their relays probably costs less than the price of the PCBs alone.
 
 However, I've come to strongly dislike my room thermostats - they're loud when switching, difficult to use, and are very feature-light. By this I mean, they turn on and off with temperature in a room.
 To fix this, I would hardwire the mains wires where OpenClock is at the moment, so the room thermostats are receiving power all the time, and install something like the Sonoff NSPanel. This would add so many more options into the rooms where the thermostats are mounted.
