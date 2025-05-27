@@ -1,0 +1,290 @@
+esphome:
+  name: openclock
+  friendly_name: OpenClock
+
+rp2040:
+  board: rpipicow
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ""
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  
+  ap:
+    ssid: "Openclock Fallback Hotspot"
+    password: ""
+    
+ota:
+  - platform: esphome
+    password: ""
+
+globals:
+  - id: upstairs_ticks
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: downstairs_ticks
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: water_ticks
+    type: int
+    restore_value: no
+    initial_value: "0"
+
+binary_sensor:
+  - platform: gpio
+    pin: GPIO26
+    name: "HW Switch 1"
+    id: "hw_switch_1"
+    internal: True
+    filters:
+      - delayed_on: 100ms
+    entity_category: "diagnostic"
+    on_state: 
+      then:
+        - lambda: |-
+            id(auto_off).turn_on();
+            if(id(hw_switch_1).state){
+
+              auto call = id(upstairs_limit).make_call();
+              call.number_increment(true);
+              call.perform();
+
+
+            //  id(upstairs_switch).turn_on();
+            }
+
+  - platform: gpio
+    pin: GPIO27
+    name: "HW Switch 2"
+    id: "hw_switch_2"
+    internal: True
+    filters:
+      - delayed_on: 100ms
+    entity_category: "diagnostic"
+    on_state: 
+      then:
+        - lambda: |-
+            id(auto_off).turn_on();
+            if(id(hw_switch_2).state){
+              
+              auto call = id(downstairs_limit).make_call();
+              call.number_increment(true);
+              call.perform();
+
+
+             // id(downstairs_switch).turn_on();
+            }
+
+  - platform: gpio
+    pin: GPIO28
+    name: "HW Switch 3"
+    id: "hw_switch_3"
+    internal: True
+    filters:
+      - delayed_on: 100ms
+    entity_category: "diagnostic"
+    on_state: 
+      then:
+        - lambda: |-
+            id(auto_off).turn_on();
+            if(id(hw_switch_3).state){
+
+              auto call = id(water_limit).make_call();
+              call.number_increment(true);
+              call.perform();
+              
+              //id(water_switch).turn_on();
+            }
+
+number:
+  - platform: template
+    name: "Upstairs duration"
+    icon: "mdi:clock-edit"
+    id: upstairs_limit
+    step: 15
+    min_value: 15
+    max_value: 120
+    optimistic: true
+    entity_category: "config"
+    unit_of_measurement: "minutes"
+  - platform: template
+    name: "Downstairs duration"
+    icon: "mdi:clock-edit"
+    id: downstairs_limit
+    step: 15
+    min_value: 15
+    max_value: 120
+    optimistic: true
+    entity_category: "config"
+    unit_of_measurement: "minutes"
+  - platform: template
+    name: "Water duration"
+    icon: "mdi:clock-edit"
+    id: water_limit
+    step: 15
+    min_value: 15
+    max_value: 120
+    optimistic: true
+    entity_category: "config"
+    unit_of_measurement: "minutes"
+
+text_sensor:
+  - platform: template
+    name: "Upstairs On-Time"
+    id: up_ticks_sensor
+    entity_category: "diagnostic"
+    lambda: 'return {std::to_string(id(upstairs_ticks)/60) + ":" + std::to_string(id(upstairs_ticks)%60)};'
+    update_interval: 10s
+
+  - platform: template
+    name: "Downstairs On-Time"
+    id: down_ticks_sensor
+    entity_category: "diagnostic"
+    lambda: 'return {std::to_string(id(downstairs_ticks)/60) + ":" + std::to_string(id(downstairs_ticks)%60)};'
+    update_interval: 10s
+
+  - platform: template
+    name: "Water On-Time"
+    id: water_ticks_sensor
+    entity_category: "diagnostic"
+    lambda: 'return {std::to_string(id(water_ticks)/60) + ":" + std::to_string(id(water_ticks)%60)};'
+    update_interval: 10s
+
+switch:
+  - platform: restart
+    name: "Restart"
+    entity_category: "diagnostic"
+  - platform: template
+    name: "Upstairs heating"
+    id: upstairs_switch
+    icon: "mdi:radiator"
+    restore_mode: ALWAYS_OFF
+    optimistic: True
+    on_turn_on: 
+      output.turn_on: relay_upstairs
+    on_turn_off: 
+      output.turn_off: relay_upstairs
+
+  - platform: template
+    name: "Downstairs heating"
+    id: downstairs_switch
+    icon: "mdi:radiator"
+    restore_mode: ALWAYS_OFF
+    optimistic: True
+    on_turn_on: 
+      - output.turn_on: relay_downstairs
+    on_turn_off: 
+      - output.turn_off: relay_downstairs
+
+  - platform: template
+    name: "Water heater"
+    id: water_switch
+    icon: "mdi:water"
+    optimistic: True
+    restore_mode: ALWAYS_OFF
+    on_turn_on: 
+      - output.turn_on: relay_water
+    on_turn_off: 
+      - output.turn_off: relay_water
+
+  - platform: template
+    name: "Enable Auto-Off"
+    id: auto_off
+    optimistic: True
+    device_class: "switch"
+    entity_category: "config"
+    restore_mode: ALWAYS_ON
+    on_turn_on: 
+      then:
+        - lambda: id(timer_tick).execute();
+    on_turn_off: 
+      then:
+        - lambda: |-
+            id(timer_tick).stop();
+            id(water_ticks) = 0;
+            id(upstairs_ticks) = 0;
+            id(downstairs_ticks) = 0;
+
+sensor:
+  - platform: adc
+    pin: TEMPERATURE
+    name: "Core Temperature"
+    entity_category: "diagnostic"
+    unit_of_measurement: "°C"
+    filters:
+      - lambda: return 27 - (x - 0.706f) / 0.001721f;
+  - platform: adc
+    pin: VCC
+    name: "VCC Voltage"
+    unit_of_measurement: "V"
+    entity_category: "diagnostic"
+
+output:
+  - platform: gpio
+    id: relay_upstairs
+    pin: GPIO18
+    inverted: true
+  - platform: gpio
+    id: relay_downstairs
+    pin: GPIO19
+    inverted: true
+  - platform: gpio
+    id: relay_water
+    pin: GPIO20
+    inverted: true
+
+script:
+  - id: timer_tick
+    mode: queued
+    then:
+      - delay: 1s
+      - lambda: |-
+            //if(!id(auto_off).state) return;
+
+            if(id(upstairs_switch).state) {
+              id(upstairs_ticks) ++;
+            } else {
+              id(upstairs_ticks) = 0;
+            }
+
+            if(id(downstairs_switch).state) {
+              id(downstairs_ticks) ++;
+            } else {
+              id(downstairs_ticks) = 0;
+            }
+
+            if(id(water_switch).state) {
+              id(water_ticks) ++;
+            } else {
+              id(water_ticks) = 0;
+            }
+
+            if(id(water_ticks) >= id(water_limit).state * 60){
+              id(relay_water).turn_off();
+              id(water_switch).turn_off();
+              id(water_ticks) = 0;
+            }
+
+            if(id(upstairs_ticks) >= id(upstairs_limit).state * 60){
+              id(relay_upstairs).turn_off();
+              id(upstairs_switch).turn_off();
+              id(upstairs_ticks) = 0;
+            }
+
+            if(id(downstairs_ticks) >= id(downstairs_limit).state * 60){
+              id(relay_downstairs).turn_off();
+              id(downstairs_switch).turn_off();
+              id(downstairs_ticks) = 0;
+            } 
+
+            id(timer_tick).execute();
